@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오수정 제보 관리자</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f6f8; color: #222; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+    .top { display: flex; align-items: baseline; gap: 12px; margin: 8px 0 16px; }
+    h1 { font-size: 20px; margin: 0; }
+    .count { color: #666; font-size: 13px; }
+    .refresh { margin-left: auto; padding: 6px 12px; border: 1px solid #ddd; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 13px; }
+    th { background: #fafafa; color: #555; font-weight: 600; white-space: nowrap; }
+    td.before { color: #b00020; }
+    td.after { color: #0a7a2f; }
+    .reason { display: inline-block; background: #eef3ff; color: #2f5fd0; border-radius: 4px; padding: 1px 6px; margin: 1px 2px 1px 0; font-size: 12px; }
+    .comment { white-space: pre-wrap; }
+    .meta { color: #999; font-size: 12px; white-space: nowrap; }
+    .del { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: #b00020; }
+    .empty, .error { background: #fff; border-radius: 10px; padding: 40px; text-align: center; color: #888; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>오수정 제보 관리자</h1>
+      <span class="count" id="count"></span>
+      <button class="refresh" onclick="load()">새로고침</button>
+    </div>
+    <div id="content"><div class="empty">불러오는 중…</div></div>
+  </div>
+
+  <script>
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function load() {
+      const content = document.getElementById('content');
+      const count = document.getElementById('count');
+      content.innerHTML = '<div class="empty">불러오는 중…</div>';
+      count.textContent = '';
+      try {
+        const res = await fetch('/api/list', { cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
+        const items = data.items || [];
+        count.textContent = '총 ' + items.length + '건 · 최신순';
+        if (!items.length) { content.innerHTML = '<div class="empty">아직 접수된 제보가 없어요.</div>'; return; }
+        const rows = items.map((it) => {
+          const d = it.data || {};
+          const reasons = (d.reason || '').split(' - ').map(r => r.trim()).filter(Boolean)
+            .map(r => '<span class="reason">' + esc(r) + '</span>').join('');
+          const when = d.ts ? esc(String(d.ts).replace('T', ' ').slice(0, 19)) : '';
+          return '<tr>'
+            + '<td class="meta">' + when + (d.fileName ? '<br>' + esc(d.fileName) : '') + '</td>'
+            + '<td class="before">' + esc(d.before) + '</td>'
+            + '<td class="after">' + esc(d.after) + '</td>'
+            + '<td>' + reasons + '</td>'
+            + '<td class="comment">' + esc(d.comment) + '</td>'
+            + '<td><button class="del" data-url="' + esc(it.url) + '">삭제</button></td>'
+            + '</tr>';
+        }).join('');
+        content.innerHTML = '<table><thead><tr>'
+          + '<th>시각 / 파일</th><th>원문</th><th>수정안</th><th>검토 사유</th><th>제보 코멘트</th><th></th>'
+          + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        content.querySelectorAll('.del').forEach((btn) => {
+          btn.addEventListener('click', () => remove(btn.dataset.url));
+        });
+      } catch (e) {
+        content.innerHTML = '<div class="error">불러오기 실패: ' + esc(e.message) + '</div>';
+      }
+    }
+
+    async function remove(url) {
+      if (!confirm('이 제보를 삭제할까요?')) return;
+      try {
+        const res = await fetch('/api/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
+        load();
+      } catch (e) {
+        alert('삭제 실패: ' + e.message);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
