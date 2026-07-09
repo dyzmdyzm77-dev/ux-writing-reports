@@ -13,7 +13,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5 # 프롬프트 대기 등으로 멈추면 5분 후 실패 처리 (무한 대기 방지)
+    timeout-minutes: 15 # Vercel 빌드 대기가 5분을 넘겨 취소된 이력 있음 — 여유 있게 (무한 대기 방지)
     steps:
       - uses: actions/checkout@v4
 
