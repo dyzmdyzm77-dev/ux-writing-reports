@@ -13,6 +13,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 5 # 프롬프트 대기 등으로 멈추면 5분 후 실패 처리 (무한 대기 방지)
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +23,6 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: 프로덕션 배포
-        run: npx vercel@latest deploy --prod --token "$VERCEL_TOKEN"
+        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
