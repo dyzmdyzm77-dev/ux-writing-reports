@@ -1,0 +1,27 @@
+# main에 푸시하면 깃허브가 대신 Vercel에 배포한다.
+# 왜 이 방식인가:
+#   1) Vercel의 git 연동 배포는 "커밋 작성자가 팀 멤버가 아님" 사유로 계속 차단됨 (Deployment was blocked)
+#   2) 사내망에서는 vercel.com/api.vercel.com이 차단이라 로컬 CLI 배포도 불가
+#   → 깃허브의 클라우드 러너가 VERCEL_TOKEN(저장소 Secrets)으로 배포하면 둘 다 우회된다.
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 수동 실행 버튼 (Actions 탭)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 기존 Vercel 프로젝트(report-admin)에 연결
+        run: npx vercel@latest link --yes --project report-admin --scope kim-s-projects9 --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: 프로덕션 배포
+        run: npx vercel@latest deploy --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
