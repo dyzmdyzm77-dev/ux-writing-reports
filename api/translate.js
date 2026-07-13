@@ -30,7 +30,8 @@ export default async function handler(req, res) {
     text;
   const out = await callGemini(apiKey, prompt);
   if (out.error) {
-    return res.status(502).json({ error: out.error });
+    // noKey: 개인 키도 서버 공용 키도 없음 — 플러그인이 이 표시를 보고 키 안내를 띄운다
+    return res.status(502).json({ error: out.error, noKey: !!out.noKey });
   }
   // 한글 포함 여부로 방향 라벨만 붙여줌 (표시용)
   const hadKorean = /[가-힣]/.test(text);
